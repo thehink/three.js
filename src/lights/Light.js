@@ -1,5 +1,6 @@
 import { Object3D } from '../core/Object3D';
 import { Color } from '../math/Color';
+import { Layers } from '../core/Layers';
 
 /**
  * @author mrdoob / http://mrdoob.com/
@@ -16,6 +17,8 @@ function Light( color, intensity ) {
 	this.intensity = intensity !== undefined ? intensity : 1;
 
 	this.receiveShadow = undefined;
+
+	this.channel = new Layers();
 
 }
 
