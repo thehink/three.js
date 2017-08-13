@@ -134,7 +134,7 @@ function WebGLLights() {
 
 		return items.filter( function ( item ) {
 
-			return channel.test( item );
+			return item === null || channel.test( item );
 
 		} );
 
@@ -217,6 +217,13 @@ function WebGLLights() {
 
 			var shadowMap = ( light.shadow && light.shadow.map ) ? light.shadow.map.texture : null;
 
+			if ( shadowMap ) {
+
+				shadowMap.mask = light.channel.mask;
+				light.shadow.matrix.mask = light.channel.mask;
+
+			}
+
 			if ( light.isAmbientLight ) {
 
 				r += color.r * intensity;
@@ -251,9 +258,6 @@ function WebGLLights() {
 					uniforms.shadowMapSize = shadow.mapSize;
 
 				}
-
-				shadowMap.mask = light.channel.mask;
-				light.shadow.matrix.mask = light.channel.mask;
 
 				state.directionalShadowMap[ directionalLength ] = shadowMap;
 				state.directionalShadowMatrix[ directionalLength ] = light.shadow.matrix;
@@ -291,9 +295,6 @@ function WebGLLights() {
 					uniforms.shadowMapSize = shadow.mapSize;
 
 				}
-
-				shadowMap.mask = light.channel.mask;
-				light.shadow.matrix.mask = light.channel.mask;
 
 				state.spotShadowMap[ spotLength ] = shadowMap;
 				state.spotShadowMatrix[ spotLength ] = light.shadow.matrix;
@@ -359,9 +360,6 @@ function WebGLLights() {
 					uniforms.shadowCameraFar = shadow.camera.far;
 
 				}
-
-				shadowMap.mask = light.channel.mask;
-				light.shadow.matrix.mask = light.channel.mask;
 
 				state.pointShadowMap[ pointLength ] = shadowMap;
 				state.pointShadowMatrix[ pointLength ] = light.shadow.matrix;

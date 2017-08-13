@@ -34,6 +34,7 @@ Light.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		this.color.copy( source.color );
 		this.intensity = source.intensity;
+		this.channel.mask = source.channel.mask;
 
 		return this;
 
