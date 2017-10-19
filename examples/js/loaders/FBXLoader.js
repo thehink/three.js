@@ -238,6 +238,7 @@
 				break;
 
 			case 'jpg':
+			case 'jpeg':
 
 				type = 'image/jpeg';
 				break;
@@ -254,15 +255,16 @@
 
 			default:
 
-				console.warn( 'FBXLoader: No support image type ' + extension );
+				console.warn( 'FBXLoader: Image type "' + extension + '" is not supported.' );
 				return;
 
 		}
 
 		if ( typeof content === 'string' ) {
 
-			// ASCII format sometimes adds an extra character to the end of the content string
-			if ( content.slice( - 1 ) !== '=' ) {
+			// ASCII format sometimes an extra ',' gets added to the end of the content string
+			// TODO: Investigate why the parser is adding this character
+			if ( content.slice( - 1 ) === ',' ) {
 
 				content = content.slice( 0, - 1 );
 
@@ -385,6 +387,21 @@
 		texture.wrapS = valueU === 0 ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
 		texture.wrapT = valueV === 0 ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
 
+		if ( 'Scaling' in textureNode.properties ) {
+
+			var values = textureNode.properties.Scaling.value;
+
+			if ( typeof values === 'string' ) {
+
+				values = parseFloatArray( values );
+
+			}
+
+			texture.repeat.x = values[ 0 ];
+			texture.repeat.y = values[ 1 ];
+
+		}
+
 		loader.setPath( currentPath );
 
 		return texture;
@@ -431,7 +448,7 @@
 		var name = materialNode.attrName;
 		var type = materialNode.properties.ShadingModel;
 
-		//Case where FBXs wrap shading model in property object.
+		//Case where FBX wraps shading model in property object.
 		if ( typeof type === 'object' ) {
 
 			type = type.value;
@@ -457,8 +474,8 @@
 				material = new THREE.MeshLambertMaterial();
 				break;
 			default:
-				console.warn( 'THREE.FBXLoader: No implementation given for material type %s in FBXLoader.js. Defaulting to standard material.', type );
-				material = new THREE.MeshStandardMaterial( { color: 0x3300ff } );
+				console.warn( 'THREE.FBXLoader: unknown material type "%s". Defaulting to MeshPhongMaterial.', type );
+				material = new THREE.MeshPhongMaterial( { color: 0x3300ff } );
 				break;
 
 		}
@@ -503,7 +520,6 @@
 		}
 		if ( properties.ReflectionFactor ) {
 
-			parameters.envMapIntensity = parseFloat( properties.ReflectionFactor.value );
 			parameters.reflectivity = parseFloat( properties.ReflectionFactor.value );
 
 		}
@@ -935,10 +951,9 @@
 
 			if ( uvInfo ) {
 
-				var uvTemp = new THREE.Vector2();
-
 				for ( var i = 0; i < uvInfo.length; i ++ ) {
 
+					var uvTemp = new THREE.Vector2();
 					vertex.uv.push( uvTemp.fromArray( getData( polygonVertexIndex, polygonIndex, vertexIndex, uvInfo[ i ] ) ) );
 
 				}
@@ -2009,7 +2024,7 @@
 		sceneGraph.updateMatrixWorld( true );
 
 		// Silly hack with the animation parsing.  We're gonna pretend the scene graph has a skeleton
-		// to attach animations to, since FBXs treat animations as animations for the entire scene,
+		// to attach animations to, since FBX treats animations as animations for the entire scene,
 		// not just for individual objects.
 		sceneGraph.skeleton = {
 			bones: modelArray
@@ -2053,6 +2068,55 @@
 		var rawCurves = FBXTree.Objects.subNodes.AnimationCurve;
 		var rawLayers = FBXTree.Objects.subNodes.AnimationLayer;
 		var rawStacks = FBXTree.Objects.subNodes.AnimationStack;
+
+		var fps = 30; // default framerate
+
+		if ( 'GlobalSettings' in FBXTree && 'TimeMode' in FBXTree.GlobalSettings.properties ) {
+
+			/* Autodesk time mode documentation can be found here:
+			*	http://docs.autodesk.com/FBX/2014/ENU/FBX-SDK-Documentation/index.html?url=cpp_ref/class_fbx_time.html,topicNumber=cpp_ref_class_fbx_time_html
+			*/
+			var timeModeEnum = [
+				30, // 0: eDefaultMode
+				120, // 1: eFrames120
+				100, // 2: eFrames100
+				60, // 3: eFrames60
+				50, // 4: eFrames50
+				48, // 5: eFrames48
+				30, // 6: eFrames30 (black and white NTSC )
+				30, // 7: eFrames30Drop
+				29.97, // 8: eNTSCDropFrame
+				29.97, // 90: eNTSCFullFrame
+				25, // 10: ePal ( PAL/SECAM )
+				24, // 11: eFrames24 (Film/Cinema)
+				1, // 12: eFrames1000 (use for date time))
+				23.976, // 13: eFilmFullFrame
+				30, // 14: eCustom: use GlobalSettings.properties.CustomFrameRate.value
+				96, // 15: eFrames96
+				72, // 16:  eFrames72
+				59.94, // 17: eFrames59dot94
+			];
+
+			var eMode = FBXTree.GlobalSettings.properties.TimeMode.value;
+
+			if ( eMode === 14 ) {
+
+				if ( 'CustomFrameRate' in FBXTree.GlobalSettings.properties ) {
+
+					fps = parseFloat( FBXTree.GlobalSettings.properties.CustomFrameRate.value );
+
+					fps = ( fps === - 1 ) ? 30 : fps;
+
+				}
+
+			} else if ( eMode <= 17 ) { // for future proofing - if more eModes get added, they will default to 30fps
+
+				fps = timeModeEnum[ eMode ];
+
+			}
+
+		}
+
 
 		/**
 		 * @type {{
@@ -2427,7 +2491,7 @@
 			layers: {},
 			stacks: {},
 			length: 0,
-			fps: 30,
+			fps: fps,
 			frames: 0
 		};
 
@@ -2825,7 +2889,7 @@
 					name: rawStacks[ nodeID ].attrName,
 					layers: layers,
 					length: timestamps.max - timestamps.min,
-					frames: ( timestamps.max - timestamps.min ) * 30
+					frames: ( timestamps.max - timestamps.min ) * returnObject.fps
 				};
 
 			}
@@ -3585,7 +3649,7 @@
 			 */
 			var animationData = {
 				name: stack.name,
-				fps: 30,
+				fps: animations.fps,
 				length: stack.length,
 				hierarchy: []
 			};
@@ -4107,7 +4171,7 @@
 				// 0.12490539252758,13.7450733184814,-0.454119384288788,0.09272.....
 				// 0.0836158767342567,13.5432004928589,-0.435397416353226,0.028.....
 				//
-				// these case the lines must contiue with previous line
+				// in these case the lines must continue from the previous line
 				if ( l.match( /^[^\s\t}]/ ) ) {
 
 					this.parseNodePropertyContinued( l );
