@@ -1,5 +1,6 @@
-import { Object3D } from '../core/Object3D.js';
-import { Color } from '../math/Color.js';
+import { Object3D } from '../core/Object3D';
+import { Color } from '../math/Color';
+import { Layers } from '../core/Layers';
 
 /**
  * @author mrdoob / http://mrdoob.com/
@@ -17,6 +18,8 @@ function Light( color, intensity ) {
 
 	this.receiveShadow = undefined;
 
+	this.channel = new Layers();
+
 }
 
 Light.prototype = Object.assign( Object.create( Object3D.prototype ), {
@@ -31,6 +34,7 @@ Light.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		this.color.copy( source.color );
 		this.intensity = source.intensity;
+		this.channel.mask = source.channel.mask;
 
 		return this;
 

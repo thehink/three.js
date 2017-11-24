@@ -2,6 +2,8 @@ import { EventDispatcher } from '../core/EventDispatcher.js';
 import { NoColors, FrontSide, FlatShading, NormalBlending, LessEqualDepth, AddEquation, OneMinusSrcAlphaFactor, SrcAlphaFactor } from '../constants.js';
 import { _Math } from '../math/Math.js';
 
+import { Layers } from '../core/Layers';
+
 /**
  * @author mrdoob / http://mrdoob.com/
  * @author alteredq / http://alteredqualia.com/
@@ -20,6 +22,8 @@ function Material() {
 
 	this.fog = true;
 	this.lights = true;
+
+	this.channel = new Layers();
 
 	this.blending = NormalBlending;
 	this.side = FrontSide;

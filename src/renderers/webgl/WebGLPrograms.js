@@ -249,7 +249,7 @@ function WebGLPrograms( renderer, extensions, capabilities ) {
 
 	};
 
-	this.acquireProgram = function ( material, shader, parameters, code ) {
+	this.acquireProgram = function ( material, shader, parameters, code, mask ) {
 
 		var program;
 
@@ -258,7 +258,7 @@ function WebGLPrograms( renderer, extensions, capabilities ) {
 
 			var programInfo = programs[ p ];
 
-			if ( programInfo.code === code ) {
+			if ( ( programInfo.mask & mask ) !== 0 && programInfo.code === code ) {
 
 				program = programInfo;
 				++ program.usedTimes;
@@ -272,6 +272,7 @@ function WebGLPrograms( renderer, extensions, capabilities ) {
 		if ( program === undefined ) {
 
 			program = new WebGLProgram( renderer, extensions, code, material, shader, parameters );
+			program.mask = mask;
 			programs.push( program );
 
 		}

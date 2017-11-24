@@ -90,6 +90,7 @@ function UniformsCache() {
 
 			}
 
+			uniforms.mask = light.channel.mask;
 			lights[ light.id ] = uniforms;
 
 			return uniforms;
@@ -107,6 +108,8 @@ function WebGLLights() {
 	var state = {
 
 		hash: '',
+
+		ambients: [], //used for light mask
 
 		ambient: [ 0, 0, 0 ],
 		directional: [],
@@ -127,9 +130,74 @@ function WebGLLights() {
 	var matrix4 = new Matrix4();
 	var matrix42 = new Matrix4();
 
+	function filterItems( items, channel ) {
+
+		return items.filter( function ( item ) {
+
+			return item === null || channel.test( item );
+
+		} );
+
+	}
+
+	function getLightsByChannel( channel ) {
+
+		var ambient = [ 0, 0, 0 ];
+
+		this.state.ambients
+			.forEach( function ( light ) {
+
+				if ( channel.test( light ) ) {
+
+					ambient[ 0 ] += light.r;
+					ambient[ 1 ] += light.g;
+					ambient[ 2 ] += light.b;
+
+				}
+
+			} );
+
+		var directionals = filterItems( this.state.directional, channel ),
+			directionalShadowMap = filterItems( this.state.directionalShadowMap, channel ),
+			directionalShadowMatrix = filterItems( this.state.directionalShadowMatrix, channel ),
+
+			spots = filterItems( this.state.spot, channel ),
+			spotShadowMap = filterItems( this.state.spotShadowMap, channel ),
+			spotShadowMatrix = filterItems( this.state.spotShadowMatrix, channel ),
+
+			points = filterItems( this.state.point, channel ),
+			pointShadowMap = filterItems( this.state.pointShadowMap, channel ),
+			pointShadowMatrix = filterItems( this.state.pointShadowMatrix, channel ),
+
+			rectArea = filterItems( this.state.rectArea, channel ),
+			hemi = filterItems( this.state.hemi, channel );
+
+
+
+		return {
+			ambient: ambient,
+			directional: directionals,
+			directionalShadowMap: directionalShadowMap,
+			directionalShadowMatrix: directionalShadowMatrix,
+			spot: spots,
+			spotShadowMap: spotShadowMap,
+			spotShadowMatrix: spotShadowMatrix,
+			rectArea: rectArea,
+			point: points,
+			pointShadowMap: pointShadowMap,
+			pointShadowMatrix: pointShadowMatrix,
+			hemi: hemi,
+
+			hash: [ channel.mask, directionals.length, points.length, spots.length, rectArea.length, hemi.length ].join( ',' ),
+		};
+
+	}
+
 	function setup( lights, shadows, camera ) {
 
 		var r = 0, g = 0, b = 0;
+
+		var ambientLength = 0;
 
 		var directionalLength = 0;
 		var pointLength = 0;
@@ -149,11 +217,25 @@ function WebGLLights() {
 
 			var shadowMap = ( light.shadow && light.shadow.map ) ? light.shadow.map.texture : null;
 
+			if ( shadowMap ) {
+
+				shadowMap.mask = light.channel.mask;
+				light.shadow.matrix.mask = light.channel.mask;
+
+			}
+
 			if ( light.isAmbientLight ) {
 
 				r += color.r * intensity;
 				g += color.g * intensity;
 				b += color.b * intensity;
+
+				state.ambients[ ambientLength ++ ] = {
+					mask: light.channel.mask,
+					r: r,
+					g: g,
+					b: b,
+				};
 
 			} else if ( light.isDirectionalLight ) {
 
@@ -308,6 +390,7 @@ function WebGLLights() {
 		state.ambient[ 1 ] = g;
 		state.ambient[ 2 ] = b;
 
+		state.ambients.length = ambientLength;
 		state.directional.length = directionalLength;
 		state.spot.length = spotLength;
 		state.rectArea.length = rectAreaLength;
@@ -320,6 +403,7 @@ function WebGLLights() {
 	}
 
 	return {
+		getLightsByChannel: getLightsByChannel,
 		setup: setup,
 		state: state
 	};
