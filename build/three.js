@@ -21130,6 +21130,12 @@
 
 			var extension;
 
+			if ( p > 10000 ) {
+
+				return p;
+
+			}
+
 			if ( p === RepeatWrapping ) return gl.REPEAT;
 			if ( p === ClampToEdgeWrapping ) return gl.CLAMP_TO_EDGE;
 			if ( p === MirroredRepeatWrapping ) return gl.MIRRORED_REPEAT;
