@@ -71,7 +71,9 @@ function Material() {
 
 }
 
-Object.assign( Material.prototype, EventDispatcher.prototype, {
+Material.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
+
+	constructor: Material,
 
 	isMaterial: true,
 
